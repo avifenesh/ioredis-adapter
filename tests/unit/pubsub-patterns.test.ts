@@ -614,7 +614,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       await subscriber.subscribe('test:unsubscribe:1', 'test:unsubscribe:2');
       
       subscriber.on('message', (_channel: string, message: string) => {
-        messages.push(`${channel}:${message}`);
+        messages.push(`${_channel}:${message}`);
       });
 
       await new Promise(resolve => setTimeout(resolve, 100));
