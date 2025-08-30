@@ -22,7 +22,7 @@ jobs:
 
     services:
       valkey-bundle:
-        image: valkey/valkey-bundle:9.0-bookworm
+        image: valkey/valkey-bundle:8.1-bookworm
         ports:
           - 6379:6379
         options: >-
@@ -51,7 +51,7 @@ jobs:
       run: |
         echo "Waiting for Valkey Bundle with modules..."
         # Install Valkey CLI from official repository
-        curl -fsSL https://download.valkey.io/valkey-9.0.0-linux-x64.tar.gz | tar xz --strip-components=1 -C /tmp
+        curl -fsSL https://download.valkey.io/valkey-8.1.1-linux-x64.tar.gz | tar xz --strip-components=1 -C /tmp
         sudo cp /tmp/bin/valkey-cli /usr/local/bin/
         
         for i in {1..30}; do
