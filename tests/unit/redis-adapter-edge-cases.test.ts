@@ -632,8 +632,6 @@ describe('Redis Adapter Edge Cases & Production Scenarios', () => {
     });
 
     test('should handle HyperLogLog operations if available', async () => {
-      const _hllKey = 'test:hll:unique:visitors';
-      
       // HyperLogLog commands are not implemented in the current adapter
       // This test verifies the adapter handles missing methods gracefully
       try {

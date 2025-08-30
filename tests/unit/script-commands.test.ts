@@ -615,7 +615,7 @@ describe('Script Commands - Atomic Operations & Business Logic', () => {
         expect(true).toBe(false);
       } catch (error) {
         expect(error).toBeDefined();
-        expect(String(error)).toContain('Unknown command');
+        expect(String(error)).toContain('Unknown Redis command');
       }
     });
   });

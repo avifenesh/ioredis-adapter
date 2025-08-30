@@ -47,7 +47,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to specific Slack-style channels
       await subscriber.subscribe('channel:general', 'channel:random', 'channel:tech-discuss');
       
-      subscriber.on('message', (_channel: string, message: string) => {
+      subscriber.on('message', (channel: string, message: string) => {
         receivedMessages.push({ channel, message });
       });
 
@@ -105,7 +105,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to direct message patterns (Slack DM format)
       await subscriber.psubscribe('dm:user123:*', 'dm:*:user123');
       
-      subscriber.on('pmessage', (_pattern: string, channel: string, message: string) => {
+      subscriber.on('pmessage', (pattern: string, channel: string, message: string) => {
         dmMessages.push({ channel, message });
       });
 
@@ -150,7 +150,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to guild presence updates (Discord pattern)
       await subscriber.psubscribe('presence:guild:*');
       
-      subscriber.on('pmessage', (_pattern: string, channel: string, message: string) => {
+      subscriber.on('pmessage', (pattern: string, channel: string, message: string) => {
         presenceUpdates.push({ channel, message });
       });
 
@@ -210,7 +210,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to voice channel events
       await subscriber.subscribe('voice:channel:updates');
       
-      subscriber.on('message', (_channel: string, message: string) => {
+      subscriber.on('message', (channel: string, message: string) => {
         if (channel === 'voice:channel:updates') {
           voiceUpdates.push(message);
         }
@@ -267,7 +267,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to Twitch stream chat
       await subscriber.subscribe('chat:stream:12345');
       
-      subscriber.on('message', (_channel: string, message: string) => {
+      subscriber.on('message', (channel: string, message: string) => {
         if (channel === 'chat:stream:12345') {
           chatMessages.push(message);
         }
@@ -315,7 +315,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to stream events
       await subscriber.subscribe('stream:events:12345');
       
-      subscriber.on('message', (_channel: string, message: string) => {
+      subscriber.on('message', (channel: string, message: string) => {
         if (channel === 'stream:events:12345') {
           streamEvents.push(message);
         }
@@ -374,7 +374,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to GitHub webhook events by repository
       await subscriber.psubscribe('github:repo:*/push', 'github:repo:*/pull_request');
       
-      subscriber.on('pmessage', (_pattern: string, channel: string, message: string) => {
+      subscriber.on('pmessage', (pattern: string, channel: string, message: string) => {
         webhookEvents.push({ channel, message });
       });
 
@@ -451,7 +451,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to cryptocurrency price feeds
       await subscriber.psubscribe('market:crypto:*', 'market:forex:*');
       
-      subscriber.on('pmessage', (_pattern: string, channel: string, message: string) => {
+      subscriber.on('pmessage', (pattern: string, channel: string, message: string) => {
         priceUpdates.push({ channel, message });
       });
 
@@ -512,7 +512,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to trading alerts
       await subscriber.subscribe('alerts:price:BTC-USD', 'alerts:volume:high');
       
-      subscriber.on('message', (_channel: string, message: string) => {
+      subscriber.on('message', (channel: string, message: string) => {
         alerts.push(message);
       });
 
@@ -561,7 +561,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to channels that may not receive messages
       await subscriber.subscribe('empty:channel:1', 'empty:channel:2');
       
-      subscriber.on('message', (_channel: string, message: string) => {
+      subscriber.on('message', (channel: string, message: string) => {
         messages.push(message);
       });
 
@@ -585,7 +585,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to pattern that won't match published channels
       await subscriber.psubscribe('nomatch:*:test');
       
-      subscriber.on('pmessage', (_pattern: string, channel: string, message: string) => {
+      subscriber.on('pmessage', (pattern: string, channel: string, message: string) => {
         patternMessages.push({ pattern, channel, message });
       });
 
@@ -613,7 +613,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       
       await subscriber.subscribe('test:unsubscribe:1', 'test:unsubscribe:2');
       
-      subscriber.on('message', (_channel: string, message: string) => {
+      subscriber.on('message', (channel: string, message: string) => {
         messages.push(`${channel}:${message}`);
       });
 
@@ -648,7 +648,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       
       await subscriber.subscribe('large:message:test');
       
-      subscriber.on('message', (_channel: string, message: string) => {
+      subscriber.on('message', (channel: string, message: string) => {
         largeMessages.push(message);
       });
 
