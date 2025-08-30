@@ -39,8 +39,13 @@ async function ensureValkeyCluster(): Promise<void> {
 }
 
 module.exports = async () => {
-  // If already provided via env, keep them
-  if (process.env.REDIS_HOST && process.env.REDIS_PORT) {
+  // If already provided via env, keep them (support both Redis and Valkey env vars for compatibility)
+  if ((process.env.REDIS_HOST && process.env.REDIS_PORT) || (process.env.VALKEY_HOST && process.env.VALKEY_PORT)) {
+    // Set both for backward compatibility
+    process.env.REDIS_HOST = process.env.REDIS_HOST || process.env.VALKEY_HOST;
+    process.env.REDIS_PORT = process.env.REDIS_PORT || process.env.VALKEY_PORT;
+    process.env.VALKEY_HOST = process.env.VALKEY_HOST || process.env.REDIS_HOST;
+    process.env.VALKEY_PORT = process.env.VALKEY_PORT || process.env.REDIS_PORT;
     return;
   }
 
@@ -49,7 +54,7 @@ module.exports = async () => {
     await ensureValkeyCluster();
     const servers = await PortDiscovery.discoverRedisServers();
     
-    // Filter out cluster ports to prioritize standalone servers for REDIS_HOST/REDIS_PORT
+    // Filter out cluster ports to prioritize standalone servers for VALKEY_HOST/VALKEY_PORT
     const clusterPorts = [7000, 7001, 7002, 7003, 7004, 7005];
     const standaloneServers = servers.filter(s => s.responsive && !clusterPorts.includes(s.port));
     
@@ -59,8 +64,12 @@ module.exports = async () => {
       servers.find(s => s.responsive);
     
     if (preferredServer) {
+      // Set both Redis and Valkey environment variables for compatibility
       process.env.REDIS_HOST = preferredServer.host;
       process.env.REDIS_PORT = String(preferredServer.port);
+      process.env.VALKEY_HOST = preferredServer.host;
+      process.env.VALKEY_PORT = String(preferredServer.port);
+      
       // Expose cluster ports for tests that need them
       process.env.VALKEY_CLUSTER_PORT_1 = '7000';
       process.env.VALKEY_CLUSTER_PORT_2 = '7001';
@@ -72,9 +81,11 @@ module.exports = async () => {
     }
   } catch {}
 
-  // Fallback to defaults
+  // Fallback to defaults (set both for compatibility)
   process.env.REDIS_HOST = process.env.REDIS_HOST || 'localhost';
   process.env.REDIS_PORT = process.env.REDIS_PORT || '6379';
+  process.env.VALKEY_HOST = process.env.VALKEY_HOST || 'localhost';
+  process.env.VALKEY_PORT = process.env.VALKEY_PORT || '6379';
   process.env.VALKEY_CLUSTER_PORT_1 = process.env.VALKEY_CLUSTER_PORT_1 || '7000';
   process.env.VALKEY_CLUSTER_PORT_2 = process.env.VALKEY_CLUSTER_PORT_2 || '7001';
   process.env.VALKEY_CLUSTER_PORT_3 = process.env.VALKEY_CLUSTER_PORT_3 || '7002';
