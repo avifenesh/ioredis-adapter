@@ -130,6 +130,10 @@ jobs:
       env:
         CI: true
         SKIP_MODULE_TESTS: true
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+        VALKEY_HOST: localhost
+        VALKEY_PORT: 6379
 
   # Note: Coverage upload is handled in the Linux job
 
