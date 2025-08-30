@@ -48,7 +48,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       await subscriber.subscribe('channel:general', 'channel:random', 'channel:tech-discuss');
       
       subscriber.on('message', (_channel: string, message: string) => {
-        receivedMessages.push({ channel, message });
+        receivedMessages.push({ channel: _channel, message });
       });
 
       // Wait for subscription to be established
@@ -211,7 +211,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       await subscriber.subscribe('voice:channel:updates');
       
       subscriber.on('message', (_channel: string, message: string) => {
-        if (channel === 'voice:channel:updates') {
+        if (_channel === 'voice:channel:updates') {
           voiceUpdates.push(message);
         }
       });
@@ -268,7 +268,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       await subscriber.subscribe('chat:stream:12345');
       
       subscriber.on('message', (_channel: string, message: string) => {
-        if (channel === 'chat:stream:12345') {
+        if (_channel === 'chat:stream:12345') {
           chatMessages.push(message);
         }
       });
@@ -316,7 +316,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       await subscriber.subscribe('stream:events:12345');
       
       subscriber.on('message', (_channel: string, message: string) => {
-        if (channel === 'stream:events:12345') {
+        if (_channel === 'stream:events:12345') {
           streamEvents.push(message);
         }
       });
@@ -586,7 +586,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       await subscriber.psubscribe('nomatch:*:test');
       
       subscriber.on('pmessage', (_pattern: string, channel: string, message: string) => {
-        patternMessages.push({ pattern, channel, message });
+        patternMessages.push({ pattern: _pattern, channel, message });
       });
 
       await new Promise(resolve => setTimeout(resolve, 100));
