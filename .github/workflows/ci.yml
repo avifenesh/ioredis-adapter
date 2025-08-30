@@ -67,14 +67,13 @@ jobs:
           sleep 2
         done
 
-    - name: Run all tests (including JSON/Search modules)
+    - name: Run all tests (including JSON/Search and Cluster modules)
       run: npm test
       env:
         CI: true
-        VALKEY_HOST: localhost
-        VALKEY_PORT: 6379
         VALKEY_BUNDLE_HOST: localhost
         VALKEY_BUNDLE_PORT: 6379
+        ENABLE_CLUSTER_TESTS: true
 
     - name: Upload coverage to Codecov
       if: matrix.node == '20'
