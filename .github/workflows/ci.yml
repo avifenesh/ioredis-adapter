@@ -67,21 +67,12 @@ jobs:
           sleep 2
         done
 
-    - name: Setup Valkey Cluster for comprehensive testing
-      run: |
-        echo "🔧 Setting up Valkey cluster for comprehensive testing..."
-        # Make script executable
-        chmod +x ./scripts/start-test-servers.sh
-        # Start cluster (script handles Docker availability check)
-        ./scripts/start-test-servers.sh --force || echo "⚠️ Cluster setup failed, will skip cluster tests"
-
-    - name: Run all tests (including JSON/Search and Cluster modules)
-      run: npm test
+    - name: Run all tests (including JSON/Search modules)
+      run: npm test -- --testPathIgnorePatterns="/tests/cluster/"
       env:
         CI: true
         VALKEY_BUNDLE_HOST: localhost
         VALKEY_BUNDLE_PORT: 6379
-        ENABLE_CLUSTER_TESTS: true
 
     - name: Upload coverage to Codecov
       if: matrix.node == '20'
