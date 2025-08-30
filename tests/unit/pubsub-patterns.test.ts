@@ -47,7 +47,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to specific Slack-style channels
       await subscriber.subscribe('channel:general', 'channel:random', 'channel:tech-discuss');
       
-      subscriber.on('message', (channel: string, message: string) => {
+      subscriber.on('message', (_channel: string, message: string) => {
         receivedMessages.push({ channel, message });
       });
 
@@ -105,7 +105,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to direct message patterns (Slack DM format)
       await subscriber.psubscribe('dm:user123:*', 'dm:*:user123');
       
-      subscriber.on('pmessage', (pattern: string, channel: string, message: string) => {
+      subscriber.on('pmessage', (_pattern: string, channel: string, message: string) => {
         dmMessages.push({ channel, message });
       });
 
@@ -150,7 +150,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to guild presence updates (Discord pattern)
       await subscriber.psubscribe('presence:guild:*');
       
-      subscriber.on('pmessage', (pattern: string, channel: string, message: string) => {
+      subscriber.on('pmessage', (_pattern: string, channel: string, message: string) => {
         presenceUpdates.push({ channel, message });
       });
 
@@ -210,7 +210,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to voice channel events
       await subscriber.subscribe('voice:channel:updates');
       
-      subscriber.on('message', (channel: string, message: string) => {
+      subscriber.on('message', (_channel: string, message: string) => {
         if (channel === 'voice:channel:updates') {
           voiceUpdates.push(message);
         }
@@ -247,15 +247,15 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
 
       expect(voiceUpdates.length).toBe(3);
 
-      const joinEvent = JSON.parse(voiceUpdates[0]);
+      const joinEvent = JSON.parse(voiceUpdates[0]!);
       expect(joinEvent.action).toBe('user_joined');
       expect(joinEvent.user_id).toBe('user123');
 
-      const muteEvent = JSON.parse(voiceUpdates[1]);
+      const muteEvent = JSON.parse(voiceUpdates[1]!);
       expect(muteEvent.action).toBe('user_muted');
       expect(muteEvent.muted).toBe(true);
 
-      const leaveEvent = JSON.parse(voiceUpdates[2]);
+      const leaveEvent = JSON.parse(voiceUpdates[2]!);
       expect(leaveEvent.action).toBe('user_left');
     });
   });
@@ -267,7 +267,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to Twitch stream chat
       await subscriber.subscribe('chat:stream:12345');
       
-      subscriber.on('message', (channel: string, message: string) => {
+      subscriber.on('message', (_channel: string, message: string) => {
         if (channel === 'chat:stream:12345') {
           chatMessages.push(message);
         }
@@ -300,12 +300,12 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       expect(chatMessages.length).toBe(5);
 
       // Verify message structure
-      const firstMessage = JSON.parse(chatMessages[0]);
+      const firstMessage = JSON.parse(chatMessages[0]!);
       expect(firstMessage.username).toBe('viewer1');
       expect(firstMessage.message).toBe('First!');
       expect(firstMessage.badges).toContain('subscriber');
 
-      const modMessage = JSON.parse(chatMessages[2]);
+      const modMessage = JSON.parse(chatMessages[2]!);
       expect(modMessage.badges).toContain('moderator');
     });
 
@@ -315,7 +315,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to stream events
       await subscriber.subscribe('stream:events:12345');
       
-      subscriber.on('message', (channel: string, message: string) => {
+      subscriber.on('message', (_channel: string, message: string) => {
         if (channel === 'stream:events:12345') {
           streamEvents.push(message);
         }
@@ -353,15 +353,15 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
 
       expect(streamEvents.length).toBe(3);
 
-      const liveEvent = JSON.parse(streamEvents[0]);
+      const liveEvent = JSON.parse(streamEvents[0]!);
       expect(liveEvent.event).toBe('stream_online');
       expect(liveEvent.game).toBe('Portal 2');
 
-      const followerEvent = JSON.parse(streamEvents[1]);
+      const followerEvent = JSON.parse(streamEvents[1]!);
       expect(followerEvent.event).toBe('new_follower');
       expect(followerEvent.total_followers).toBe(1543);
 
-      const raidEvent = JSON.parse(streamEvents[2]);
+      const raidEvent = JSON.parse(streamEvents[2]!);
       expect(raidEvent.event).toBe('raid_received');
       expect(raidEvent.raiders).toBe(250);
     });
@@ -374,7 +374,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to GitHub webhook events by repository
       await subscriber.psubscribe('github:repo:*/push', 'github:repo:*/pull_request');
       
-      subscriber.on('pmessage', (pattern: string, channel: string, message: string) => {
+      subscriber.on('pmessage', (_pattern: string, channel: string, message: string) => {
         webhookEvents.push({ channel, message });
       });
 
@@ -451,7 +451,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to cryptocurrency price feeds
       await subscriber.psubscribe('market:crypto:*', 'market:forex:*');
       
-      subscriber.on('pmessage', (pattern: string, channel: string, message: string) => {
+      subscriber.on('pmessage', (_pattern: string, channel: string, message: string) => {
         priceUpdates.push({ channel, message });
       });
 
@@ -512,7 +512,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to trading alerts
       await subscriber.subscribe('alerts:price:BTC-USD', 'alerts:volume:high');
       
-      subscriber.on('message', (channel: string, message: string) => {
+      subscriber.on('message', (_channel: string, message: string) => {
         alerts.push(message);
       });
 
@@ -543,12 +543,12 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
 
       expect(alerts.length).toBe(2);
 
-      const priceAlert = JSON.parse(alerts[0]);
+      const priceAlert = JSON.parse(alerts[0]!);
       expect(priceAlert.type).toBe('price_alert');
       expect(priceAlert.current_price).toBe(45230.50);
       expect(priceAlert.condition).toBe('above');
 
-      const volumeAlert = JSON.parse(alerts[1]);
+      const volumeAlert = JSON.parse(alerts[1]!);
       expect(volumeAlert.type).toBe('volume_alert');
       expect(volumeAlert.spike_percentage).toBe(52);
     });
@@ -561,7 +561,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to channels that may not receive messages
       await subscriber.subscribe('empty:channel:1', 'empty:channel:2');
       
-      subscriber.on('message', (channel: string, message: string) => {
+      subscriber.on('message', (_channel: string, message: string) => {
         messages.push(message);
       });
 
@@ -585,7 +585,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       // Subscribe to pattern that won't match published channels
       await subscriber.psubscribe('nomatch:*:test');
       
-      subscriber.on('pmessage', (pattern: string, channel: string, message: string) => {
+      subscriber.on('pmessage', (_pattern: string, channel: string, message: string) => {
         patternMessages.push({ pattern, channel, message });
       });
 
@@ -605,7 +605,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(patternMessages).toHaveLength(1);
-      expect(patternMessages[0].message).toBe('matching message');
+      expect(patternMessages[0]?.message).toBe('matching message');
     });
 
     test('should handle unsubscribe operations', async () => {
@@ -613,7 +613,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       
       await subscriber.subscribe('test:unsubscribe:1', 'test:unsubscribe:2');
       
-      subscriber.on('message', (channel: string, message: string) => {
+      subscriber.on('message', (_channel: string, message: string) => {
         messages.push(`${channel}:${message}`);
       });
 
@@ -648,7 +648,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
       
       await subscriber.subscribe('large:message:test');
       
-      subscriber.on('message', (channel: string, message: string) => {
+      subscriber.on('message', (_channel: string, message: string) => {
         largeMessages.push(message);
       });
 
@@ -669,7 +669,7 @@ describe('Pub/Sub Patterns - Real-World Message Routing', () => {
 
       expect(largeMessages).toHaveLength(1);
       
-      const received = JSON.parse(largeMessages[0]);
+      const received = JSON.parse(largeMessages[0]!);
       expect(received.data.length).toBe(1000);
       expect(received.metadata.type).toBe('large_payload_test');
     });
