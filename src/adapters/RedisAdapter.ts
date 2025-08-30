@@ -503,7 +503,7 @@ export class RedisAdapter extends EventEmitter implements IRedisAdapter {
     }
     
     const result = await client.xtrim(normalizedKey, options);
-    return result || 0;
+    return typeof result === 'number' ? result : 0;
   }
 
   async xreadgroup(group: string, consumer: string, ...args: any[]): Promise<any> {
@@ -1499,7 +1499,13 @@ export class RedisAdapter extends EventEmitter implements IRedisAdapter {
     const normalizedKey = ParameterTranslator.normalizeKey(key);
     const normalizedMember = ParameterTranslator.normalizeValue(member);
     const result = await client.zscore(normalizedKey, normalizedMember);
-    return result !== null ? result.toString() : null;
+    if (result === null) return null;
+    
+    const scoreStr = result.toString();
+    // Normalize infinity values to match ioredis format
+    if (scoreStr === '-Infinity') return '-inf';
+    if (scoreStr === 'Infinity') return 'inf';
+    return scoreStr;
   }
 
   async zcard(key: RedisKey): Promise<number> {

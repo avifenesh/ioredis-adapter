@@ -42,7 +42,13 @@ export class ZSetCommands {
     const normalizedKey = ParameterTranslator.normalizeKey(key);
     const normalizedMember = ParameterTranslator.normalizeValue(member);
     const result = await client.zscore(normalizedKey, normalizedMember);
-    return result !== null ? result.toString() : null;
+    if (result === null) return null;
+    
+    const scoreStr = result.toString();
+    // Normalize infinity values to match ioredis format
+    if (scoreStr === '-Infinity') return '-inf';
+    if (scoreStr === 'Infinity') return 'inf';
+    return scoreStr;
   }
 
   async zrank(key: RedisKey, member: RedisValue): Promise<number | null> {
