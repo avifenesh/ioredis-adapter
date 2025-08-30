@@ -27,6 +27,7 @@ stop-cluster.sh
 docs/
 CONTRIBUTING.md
 CLAUDE.md
+TESTING-VALKEY-MODULES.md
 memory-bank/
 
 # Environment and test files (exclude from npm package)
@@ -66,4 +67,6 @@ Thumbs.db
 # - README.md
 # - LICENSE
 # - package.json
-# - CHANGELOG.md (auto-generated)
+# - CHANGELOG.md
+# - COMPATIBILITY.md
+# - MIGRATION.md

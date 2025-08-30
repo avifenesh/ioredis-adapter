@@ -10,6 +10,11 @@ export class StringCommands {
   constructor(private getClient: () => Promise<GlideClient>) {}
 
   async set(key: RedisKey, value: RedisValue, ...args: any[]): Promise<string | null> {
+    // Validate key is not empty (ioredis compatibility)
+    if (key === '' || key === null || key === undefined) {
+      throw new Error('ERR wrong number of arguments for \'set\' command');
+    }
+    
     const client = await this.getClient();
     const normalizedKey = ParameterTranslator.normalizeKey(key);
     const normalizedValue = ParameterTranslator.normalizeValue(value);

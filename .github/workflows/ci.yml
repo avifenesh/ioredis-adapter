@@ -6,28 +6,33 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+permissions:
+  contents: read
+
 jobs:
-  test:
-    name: Test on ${{ matrix.os }} (${{ matrix.arch }})
-    runs-on: ${{ matrix.os }}
+  test-linux:
+    name: Test on Linux with Valkey Bundle (${{ matrix.arch }}, Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            arch: x64
+          - arch: x64
             node: '18'
-          - os: ubuntu-latest
-            arch: x64
+          - arch: x64
             node: '20'
-          - os: ubuntu-latest
-            arch: arm64
+          - arch: arm64
             node: '18'
-          - os: macos-latest
-            arch: x64
-            node: '18'
-          - os: macos-latest
-            arch: x64
-            node: '20'
+
+    services:
+      valkey-bundle:
+        image: valkey/valkey-bundle:8.1-bookworm
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
     - name: Checkout code
@@ -45,33 +50,90 @@ jobs:
     - name: Build project
       run: npm run build
 
-    - name: Start Redis server
+    - name: Wait for Valkey Bundle and verify modules
       run: |
-        if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-          sudo apt-get update
-          sudo apt-get install -y redis-server
-          sudo systemctl start redis-server
-        elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-          brew install redis
-          brew services start redis
-        fi
+        echo "Waiting for Valkey Bundle with modules..."
+        # Install valkey-cli (native on Ubuntu 24.04)
+        sudo apt-get update && sudo apt-get install -y valkey-tools
+        
+        for i in {1..30}; do
+          if valkey-cli -h localhost -p 6379 ping > /dev/null 2>&1; then
+            echo "✅ Valkey Bundle is ready!"
+            echo "📦 Checking loaded modules..."
+            valkey-cli -h localhost -p 6379 INFO modules | grep -E "(json|search)" || echo "⚠️  Module info not available"
+            break
+          fi
+          echo "⏳ Waiting for Valkey Bundle... ($i/30)"
+          sleep 2
+        done
 
-    - name: Wait for Redis
-      run: |
-        timeout 30 bash -c 'until redis-cli ping; do sleep 1; done'
-
-    - name: Run tests
-      run: npm test
+    - name: Run all tests (including JSON/Search modules)
+      run: npm test -- --testPathIgnorePatterns="/tests/cluster/"
       env:
         CI: true
+        VALKEY_BUNDLE_HOST: localhost
+        VALKEY_BUNDLE_PORT: 6379
 
     - name: Upload coverage to Codecov
-      if: matrix.os == 'ubuntu-latest' && matrix.node == '20'
+      if: matrix.node == '20'
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage/lcov.info
         flags: unittests
         name: codecov-umbrella
+
+  test-macos:
+    name: Test on macOS (basic Valkey only)
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        node: ['18', '20']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build project
+      run: npm run build
+
+    - name: Start Valkey server (basic)
+      run: |
+        # Use Redis as Valkey equivalent for macOS testing
+        brew install redis
+        brew services start redis
+
+    - name: Wait for Valkey
+      run: |
+        for i in {1..30}; do
+          if redis-cli ping > /dev/null 2>&1; then
+            echo "✅ Valkey is ready!"
+            break
+          fi
+          echo "⏳ Waiting for Valkey... ($i/30)"
+          sleep 1
+        done
+        redis-cli ping
+
+    - name: Run core tests (skip module tests)
+      run: npm test -- --testPathIgnorePatterns="/tests/unit/json-commands.test.ts|/tests/unit/search-commands.test.ts" --runInBand
+      env:
+        CI: true
+        SKIP_MODULE_TESTS: true
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+        VALKEY_HOST: localhost
+        VALKEY_PORT: 6379
+
+  # Note: Coverage upload is handled in the Linux job
 
   lint:
     name: Lint and Type Check

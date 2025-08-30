@@ -22,6 +22,12 @@ export class ParameterTranslator {
     }
 
     const [key, value, ...optionArgs] = args;
+    
+    // Validate key is not empty (ioredis compatibility)
+    if (key === '' || key === null || key === undefined) {
+      throw new Error('ERR wrong number of arguments for \'set\' command');
+    }
+    
     const result = {
       key: key.toString(),
       value: value.toString(),

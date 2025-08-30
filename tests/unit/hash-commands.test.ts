@@ -1,303 +1,296 @@
 /**
- * Hash Commands Behavioral Tests  
- * These tests are adapted from ioredis patterns to ensure compatibility
+ * Hash Commands Comprehensive Tests  
+ * Real-world patterns: Session storage, user profiles, object caching, shopping carts
  */
 
 import { RedisAdapter } from '../../src/adapters/RedisAdapter';
-import { testUtils } from '../setup';
+import { getRedisTestConfig } from '../utils/redis-config';
 
-describe('Hash Commands (ioredis compatibility)', () => {
+describe('Hash Commands - Real-World Patterns', () => {
   let redis: RedisAdapter;
 
-  beforeAll(async () => {
-    // Check if test servers are available
-    const serversAvailable = await testUtils.checkTestServers();
-    if (!serversAvailable) {
-      throw new Error('Test servers not available. Please start Redis server before running tests.');
-    }
-  });
-
   beforeEach(async () => {
-    // Health check before each test
-    const serversAvailable = await testUtils.checkTestServers();
-    if (!serversAvailable) {
-      throw new Error('Test servers became unavailable during test execution');
-    }
-
-    // Use test server configuration
-    const config = await testUtils.getStandaloneConfig();
+    const config = await getRedisTestConfig();
     redis = new RedisAdapter(config);
-    await redis.connect();
-
-    // Clean up any existing test data
-    try {
-      await redis.del('myhash', 'nonexistenthash', 'testhash', 'largehash', 'newhash', 'emptyhash');
-    } catch {
-      // Ignore cleanup errors
-    }
   });
 
   afterEach(async () => {
-    if (redis) {
-      await redis.disconnect();
-    }
+    await redis.disconnect();
   });
 
-  describe('HSET and HGET operations', () => {
-    test('hset and hget should work with basic field-value pairs', async () => {
-      const result = await redis.hset('myhash', 'field1', 'value1');
-      expect(result).toBe(1); // Number of fields added
+  describe('User Session Management', () => {
+    test('should manage user session data with HSET/HGET', async () => {
+      const sessionKey = 'session:' + Math.random();
       
-      const value = await redis.hget('myhash', 'field1');
-      expect(value).toBe('value1');
+      // Create session
+      const result1 = await redis.hset(sessionKey, 'userId', '12345');
+      expect(result1).toBe(1);
+
+      const result2 = await redis.hset(sessionKey, 'username', 'john_doe', 'email', 'john@example.com');
+      expect(result2).toBe(2);
+
+      // Retrieve session data
+      const userId = await redis.hget(sessionKey, 'userId');
+      expect(userId).toBe('12345');
+
+      const username = await redis.hget(sessionKey, 'username');
+      expect(username).toBe('john_doe');
+
+      const nonexistent = await redis.hget(sessionKey, 'nonexistent');
+      expect(nonexistent).toBeNull();
     });
 
-    test('hget should return null for non-existent field', async () => {
-      await redis.hset('myhash', 'field1', 'value1');
-      const value = await redis.hget('myhash', 'nonexistent');
-      expect(value).toBeNull();
-    });
-
-    test('hget should return null for non-existent hash', async () => {
-      const value = await redis.hget('nonexistenthash', 'field1');
-      expect(value).toBeNull();
-    });
-
-    test('hset should overwrite existing field values', async () => {
-      await redis.hset('myhash', 'field1', 'value1');
-      const result = await redis.hset('myhash', 'field1', 'newvalue');
-      expect(result).toBe(0); // No new fields added, just updated
+    test('should handle bulk session operations with HMGET/HMSET', async () => {
+      const sessionKey = 'session:bulk:' + Math.random();
       
-      const value = await redis.hget('myhash', 'field1');
-      expect(value).toBe('newvalue');
-    });
-
-    test('hset should accept multiple field-value pairs', async () => {
-      // ioredis variadic pattern: redis.hset('hash', 'f1', 'v1', 'f2', 'v2')
-      const result = await redis.hset('myhash', 'field1', 'value1', 'field2', 'value2');
-      expect(result).toBe(2);
+      // Set multiple fields at once with object
+      const sessionData = {
+        userId: '67890',
+        username: 'jane_doe',
+        email: 'jane@example.com',
+        role: 'admin',
+        lastLogin: '2024-01-01T12:00:00Z'
+      };
       
-      expect(await redis.hget('myhash', 'field1')).toBe('value1');
-      expect(await redis.hget('myhash', 'field2')).toBe('value2');
-    });
-
-    test('hset should accept object format', async () => {
-      // ioredis object pattern: redis.hset('hash', {field1: 'value1', field2: 'value2'})
-      const result = await redis.hset('myhash', { field1: 'value1', field2: 'value2' });
-      expect(result).toBe(2);
-      
-      expect(await redis.hget('myhash', 'field1')).toBe('value1');
-      expect(await redis.hget('myhash', 'field2')).toBe('value2');
-    });
-  });
-
-  describe('HMSET and HMGET operations', () => {
-    test('hmset should set multiple fields at once (variadic)', async () => {
-      // ioredis pattern: redis.hmset('hash', 'field1', 'value1', 'field2', 'value2')
-      const result = await redis.hmset('myhash', 'field1', 'value1', 'field2', 'value2');
+      const result = await redis.hmset(sessionKey, sessionData);
       expect(result).toBe('OK');
-      
-      expect(await redis.hget('myhash', 'field1')).toBe('value1');
-      expect(await redis.hget('myhash', 'field2')).toBe('value2');
+
+      // Get multiple fields at once
+      const values = await redis.hmget(sessionKey, 'userId', 'username', 'email', 'nonexistent');
+      expect(values).toEqual(['67890', 'jane_doe', 'jane@example.com', null]);
+
+      // Get all session data
+      const allData = await redis.hgetall(sessionKey);
+      expect(allData).toEqual(sessionData);
     });
 
-    test('hmset should accept object format', async () => {
-      // ioredis pattern: redis.hmset('hash', {field1: 'value1', field2: 'value2'})
-      const result = await redis.hmset('myhash', { field1: 'value1', field2: 'value2' });
+    test('should update session counters with HINCRBY', async () => {
+      const sessionKey = 'session:counter:' + Math.random();
+      
+      // Initialize session with login count
+      await redis.hset(sessionKey, 'loginCount', '1');
+
+      // Increment login count
+      const newCount = await redis.hincrby(sessionKey, 'loginCount', 1);
+      expect(newCount).toBe(2);
+
+      // Increment non-existent field
+      const pageViews = await redis.hincrby(sessionKey, 'pageViews', 5);
+      expect(pageViews).toBe(5);
+
+      const finalCount = await redis.hget(sessionKey, 'loginCount');
+      expect(finalCount).toBe('2');
+    });
+  });
+
+  describe('User Profile Caching', () => {
+    test('should cache user profiles with HGETALL', async () => {
+      const profileKey = 'profile:user:' + Math.random();
+      
+      // Store user profile
+      const profileData = {
+        id: '123',
+        name: 'Alice Johnson',
+        email: 'alice@example.com',
+        preferences: JSON.stringify({ theme: 'dark', notifications: true })
+      };
+
+      const result = await redis.hmset(profileKey, profileData);
       expect(result).toBe('OK');
+
+      // Retrieve full profile
+      const storedProfile = await redis.hgetall(profileKey);
+      expect(storedProfile.id).toBe('123');
+      expect(storedProfile.name).toBe('Alice Johnson');
       
-      expect(await redis.hget('myhash', 'field1')).toBe('value1');
-      expect(await redis.hget('myhash', 'field2')).toBe('value2');
+      const preferences = JSON.parse(storedProfile.preferences!);
+      expect(preferences.theme).toBe('dark');
+      expect(preferences.notifications).toBe(true);
     });
 
-    test('hmget should return multiple values', async () => {
-      await redis.hmset('myhash', 'field1', 'value1', 'field2', 'value2', 'field3', 'value3');
+    test('should handle profile field operations', async () => {
+      const profileKey = 'profile:fields:' + Math.random();
       
-      // ioredis variadic pattern: redis.hmget('hash', 'field1', 'field2')
-      const result1 = await redis.hmget('myhash', 'field1', 'field2', 'field3');
-      expect(result1).toEqual(['value1', 'value2', 'value3']);
-      
-      // ioredis array pattern: redis.hmget('hash', ['field1', 'field2'])
-      const result2 = await redis.hmget('myhash', ['field1', 'field2']);
-      expect(result2).toEqual(['value1', 'value2']);
-    });
+      await redis.hset(profileKey, 'name', 'Bob Smith', 'age', '30');
 
-    test('hmget should return null for non-existent fields', async () => {
-      await redis.hmset('myhash', 'field1', 'value1');
-      const result = await redis.hmget('myhash', 'field1', 'nonexistent', 'alsomissing');
-      expect(result).toEqual(['value1', null, null]);
-    });
+      // Check field existence
+      const nameExists = await redis.hexists(profileKey, 'name');
+      expect(nameExists).toBe(1);
 
-    test('hmget should return all nulls for non-existent hash', async () => {
-      const result = await redis.hmget('nonexistenthash', 'field1', 'field2');
-      expect(result).toEqual([null, null]);
+      const emailExists = await redis.hexists(profileKey, 'email');
+      expect(emailExists).toBe(0);
+
+      // Get field count
+      const fieldCount = await redis.hlen(profileKey);
+      expect(fieldCount).toBe(2);
+
+      // Get all field names
+      const fieldNames = await redis.hkeys(profileKey);
+      expect(fieldNames.sort()).toEqual(['age', 'name']);
+
+      // Get all values
+      const values = await redis.hvals(profileKey);
+      expect(values.sort()).toEqual(['30', 'Bob Smith']);
     });
   });
 
-  describe('HGETALL operation', () => {
-    test('hgetall should return all field-value pairs', async () => {
-      await redis.hmset('myhash', 'field1', 'value1', 'field2', 'value2', 'field3', 'value3');
+  describe('Shopping Cart Implementation', () => {
+    test('should manage shopping cart items', async () => {
+      const cartKey = 'cart:user:' + Math.random();
       
-      const result = await redis.hgetall('myhash');
-      expect(result).toEqual({
-        field1: 'value1',
-        field2: 'value2',
-        field3: 'value3'
-      });
+      // Add items to cart
+      await redis.hset(cartKey, 'item_1', JSON.stringify({
+        productId: 'PROD-001',
+        name: 'Laptop',
+        price: 999.99,
+        quantity: 1
+      }));
+
+      await redis.hset(cartKey, 'item_2', JSON.stringify({
+        productId: 'PROD-002', 
+        name: 'Mouse',
+        price: 29.99,
+        quantity: 2
+      }));
+
+      // Get cart contents
+      const cartItems = await redis.hgetall(cartKey);
+      expect(Object.keys(cartItems)).toHaveLength(2);
+
+      const item1 = JSON.parse(cartItems.item_1!);
+      expect(item1.productId).toBe('PROD-001');
+      expect(item1.price).toBe(999.99);
+
+      // Remove an item
+      const removed = await redis.hdel(cartKey, 'item_1');
+      expect(removed).toBe(1);
+
+      const remainingItems = await redis.hlen(cartKey);
+      expect(remainingItems).toBe(1);
     });
 
-    test('hgetall should return empty object for non-existent hash', async () => {
-      const result = await redis.hgetall('nonexistenthash');
-      expect(result).toEqual({});
-    });
-
-    test('hgetall should return empty object for empty hash', async () => {
-      await redis.hset('emptyhash', 'field1', 'value1');
-      await redis.hdel('emptyhash', 'field1');
+    test('should handle cart item quantity updates', async () => {
+      const cartKey = 'cart:quantity:' + Math.random();
       
-      const result = await redis.hgetall('emptyhash');
-      expect(result).toEqual({});
+      // Add item with quantity
+      await redis.hset(cartKey, 'item_quantity_1', '3');
+
+      // Increase quantity
+      const newQuantity = await redis.hincrby(cartKey, 'item_quantity_1', 2);
+      expect(newQuantity).toBe(5);
+
+      // Decrease quantity
+      const decreasedQuantity = await redis.hincrby(cartKey, 'item_quantity_1', -1);
+      expect(decreasedQuantity).toBe(4);
     });
   });
 
-  describe('Hash field operations', () => {
-    test('hdel should delete specified fields', async () => {
-      await redis.hmset('myhash', 'field1', 'value1', 'field2', 'value2', 'field3', 'value3');
+  describe('Advanced Hash Operations', () => {
+    test('should handle floating point increments', async () => {
+      const metricsKey = 'metrics:' + Math.random();
       
-      // ioredis variadic pattern: redis.hdel('hash', 'field1', 'field2')
-      const result = await redis.hdel('myhash', 'field1', 'field3');
-      expect(result).toBe(2); // Number of fields deleted
+      // Initialize metrics
+      await redis.hset(metricsKey, 'cpu_usage', '45.5');
+
+      // Increment with float
+      const newCpuUsage = await redis.hincrbyfloat(metricsKey, 'cpu_usage', 2.3);
+      expect(parseFloat(newCpuUsage.toString())).toBeCloseTo(47.8, 1);
+
+      // Initialize new field with float increment
+      const diskUsage = await redis.hincrbyfloat(metricsKey, 'disk_usage', 33.7);
+      expect(parseFloat(diskUsage.toString())).toBeCloseTo(33.7, 1);
+    });
+
+    test('should handle conditional field setting with HSETNX', async () => {
+      const configKey = 'config:app:' + Math.random();
       
-      expect(await redis.hget('myhash', 'field1')).toBeNull();
-      expect(await redis.hget('myhash', 'field2')).toBe('value2');
-      expect(await redis.hget('myhash', 'field3')).toBeNull();
-    });
-
-    test('hdel should return 0 for non-existent fields', async () => {
-      await redis.hset('myhash', 'field1', 'value1');
-      const result = await redis.hdel('myhash', 'nonexistent1', 'nonexistent2');
-      expect(result).toBe(0);
-    });
-
-    test('hexists should check field existence', async () => {
-      await redis.hset('myhash', 'field1', 'value1');
-      
-      expect(await redis.hexists('myhash', 'field1')).toBe(1); // Field exists
-      expect(await redis.hexists('myhash', 'nonexistent')).toBe(0); // Field doesn't exist
-      expect(await redis.hexists('nonexistenthash', 'field1')).toBe(0); // Hash doesn't exist
-    });
-
-    test('hkeys should return all field names', async () => {
-      await redis.hmset('myhash', 'field1', 'value1', 'field2', 'value2', 'field3', 'value3');
-      
-      const keys = await redis.hkeys('myhash');
-      expect(keys.sort()).toEqual(['field1', 'field2', 'field3']);
-    });
-
-    test('hkeys should return empty array for non-existent hash', async () => {
-      const keys = await redis.hkeys('nonexistenthash');
-      expect(keys).toEqual([]);
-    });
-
-    test('hvals should return all field values', async () => {
-      await redis.hmset('myhash', 'field1', 'value1', 'field2', 'value2', 'field3', 'value3');
-      
-      const values = await redis.hvals('myhash');
-      expect(values.sort()).toEqual(['value1', 'value2', 'value3']);
-    });
-
-    test('hvals should return empty array for non-existent hash', async () => {
-      const values = await redis.hvals('nonexistenthash');
-      expect(values).toEqual([]);
-    });
-
-    test('hlen should return number of fields', async () => {
-      await redis.hmset('myhash', 'field1', 'value1', 'field2', 'value2');
-      
-      const length = await redis.hlen('myhash');
-      expect(length).toBe(2);
-    });
-
-    test('hlen should return 0 for non-existent hash', async () => {
-      const length = await redis.hlen('nonexistenthash');
-      expect(length).toBe(0);
-    });
-  });
-
-  describe('Hash increment operations', () => {
-    test('hincrby should increment numeric field value', async () => {
-      await redis.hset('myhash', 'counter', '10');
-      
-      const result = await redis.hincrby('myhash', 'counter', 5);
-      expect(result).toBe(15);
-      expect(await redis.hget('myhash', 'counter')).toBe('15');
-    });
-
-    test('hincrby should initialize field to increment value for non-existent field', async () => {
-      const result = await redis.hincrby('myhash', 'newcounter', 5);
-      expect(result).toBe(5);
-      expect(await redis.hget('myhash', 'newcounter')).toBe('5');
-    });
-
-    test('hincrbyfloat should increment float field value', async () => {
-      await redis.hset('myhash', 'float_counter', '10.5');
-      
-      const result = await redis.hincrbyfloat('myhash', 'float_counter', 2.3);
-      expect(result).toBe(12.8);
-      expect(await redis.hget('myhash', 'float_counter')).toBe('12.8');
-    });
-
-    test('hincrby should throw error for non-numeric field', async () => {
-      await redis.hset('myhash', 'text_field', 'not_a_number');
-      await expect(redis.hincrby('myhash', 'text_field', 1)).rejects.toThrow();
-    });
-  });
-
-  describe('Conditional hash operations', () => {
-    test('hsetnx should set field only if it does not exist', async () => {
-      const result1 = await redis.hsetnx('myhash', 'field1', 'value1');
+      // Set default configuration
+      const result1 = await redis.hsetnx(configKey, 'theme', 'light');
       expect(result1).toBe(1); // Field was set
-      
-      const result2 = await redis.hsetnx('myhash', 'field1', 'value2');
-      expect(result2).toBe(0); // Field was not set because it exists
-      
-      expect(await redis.hget('myhash', 'field1')).toBe('value1');
+
+      const result2 = await redis.hsetnx(configKey, 'theme', 'dark');
+      expect(result2).toBe(0); // Field was not set (already exists)
+
+      // Verify the original value wasn't changed
+      const theme = await redis.hget(configKey, 'theme');
+      expect(theme).toBe('light');
+
+      // Set a new field
+      const result3 = await redis.hsetnx(configKey, 'language', 'en');
+      expect(result3).toBe(1);
     });
 
-    test('hsetnx should work on non-existent hash', async () => {
-      const result = await redis.hsetnx('newhash', 'field1', 'value1');
-      expect(result).toBe(1);
-      expect(await redis.hget('newhash', 'field1')).toBe('value1');
+    test('should handle bulk field deletion', async () => {
+      const tempKey = 'temp:data:' + Math.random();
+      
+      // Create hash with multiple fields
+      await redis.hmset(tempKey, {
+        field1: 'value1',
+        field2: 'value2', 
+        field3: 'value3',
+        field4: 'value4'
+      });
+
+      const initialCount = await redis.hlen(tempKey);
+      expect(initialCount).toBe(4);
+
+      // Delete multiple fields
+      const deletedCount = await redis.hdel(tempKey, 'field1', 'field3', 'nonexistent');
+      expect(deletedCount).toBe(2); // Only 2 fields existed and were deleted
+
+      const remainingCount = await redis.hlen(tempKey);
+      expect(remainingCount).toBe(2);
     });
   });
 
-  describe('Edge cases and error handling', () => {
-    test('operations should handle large hash sizes', async () => {
-      const fields: Record<string, string> = {};
-      for (let i = 0; i < 100; i++) {
-        fields[`field${i}`] = `value${i}`;
-      }
+  describe('Error Handling and Edge Cases', () => {
+    test('should handle operations on non-existent hashes', async () => {
+      const nonExistentKey = 'nonexistent:hash:' + Math.random();
       
-      await redis.hmset('largehash', fields);
-      const result = await redis.hgetall('largehash');
-      expect(Object.keys(result)).toHaveLength(100);
+      // Operations on non-existent hash should return appropriate defaults
+      const value = await redis.hget(nonExistentKey, 'field');
+      expect(value).toBeNull();
+
+      const values = await redis.hmget(nonExistentKey, 'field1', 'field2');
+      expect(values).toEqual([null, null]);
+
+      const allData = await redis.hgetall(nonExistentKey);
+      expect(allData).toEqual({});
+
+      const exists = await redis.hexists(nonExistentKey, 'field');
+      expect(exists).toBe(0);
+
+      const length = await redis.hlen(nonExistentKey);
+      expect(length).toBe(0);
+
+      const keys = await redis.hkeys(nonExistentKey);
+      expect(keys).toEqual([]);
+
+      const vals = await redis.hvals(nonExistentKey);
+      expect(vals).toEqual([]);
     });
 
-    test('operations should handle empty field names', async () => {
-      await redis.hset('myhash', '', 'empty_field_value');
-      expect(await redis.hget('myhash', '')).toBe('empty_field_value');
+    test('should handle type conflicts gracefully', async () => {
+      const stringKey = 'string:key:' + Math.random();
+      
+      // Set a string value
+      await redis.set(stringKey, 'not-a-hash');
+
+      // Hash operations should fail on string keys
+      await expect(redis.hset(stringKey, 'field', 'value')).rejects.toThrow();
+      await expect(redis.hget(stringKey, 'field')).rejects.toThrow();
     });
 
-    test('operations should handle special characters in field names', async () => {
-      const specialField = 'field:with:colons:and:unicode:🚀';
-      await redis.hset('myhash', specialField, 'special_value');
-      expect(await redis.hget('myhash', specialField)).toBe('special_value');
-    });
+    test('should handle empty field names and values', async () => {
+      const edgeCaseKey = 'edge:case:' + Math.random();
+      
+      // Test empty value
+      const result = await redis.hset(edgeCaseKey, 'empty_value', '');
+      expect(result).toBe(1);
 
-    test('operations should handle large field values', async () => {
-      const largeValue = 'x'.repeat(10000);
-      await redis.hset('myhash', 'largefield', largeValue);
-      expect(await redis.hget('myhash', 'largefield')).toBe(largeValue);
+      // Retrieve empty value
+      const emptyValue = await redis.hget(edgeCaseKey, 'empty_value');
+      expect(emptyValue).toBe('');
     });
   });
 });

@@ -154,4 +154,62 @@ export class ResultTranslator {
     
     return new Error(glideError?.message || 'Unknown GLIDE error');
   }
+
+  /**
+   * Converts GLIDE XREAD result to ioredis format.
+   * GLIDE returns: Array<{ key: string, value: Record<string, [string, string][]> }> | null
+   * ioredis expects: [[streamKey, [[id1, [field1, value1, field2, value2]], [id2, [...]]]]]
+   */
+  static translateStreamReadResponse(glideResult: any): any[] | null {
+    if (!glideResult || !Array.isArray(glideResult) || glideResult.length === 0) {
+      return [];
+    }
+
+    const ioredisStreams: [string, [string, string[]][]][] = [];
+    
+    for (const streamData of glideResult) {
+      if (!streamData || !streamData.key || !streamData.value) {
+        continue;
+      }
+      
+      const streamKey = streamData.key;
+      const entries = streamData.value;
+      const ioredisEntries: [string, string[]][] = [];
+      
+      for (const [entryId, fieldValuePairs] of Object.entries(entries)) {
+        const flatFields: string[] = [];
+        for (const [field, value] of fieldValuePairs as [string, string][]) {
+          flatFields.push(field, value);
+        }
+        ioredisEntries.push([entryId, flatFields]);
+      }
+      
+      ioredisStreams.push([streamKey, ioredisEntries]);
+    }
+    
+    return ioredisStreams;
+  }
+
+  /**
+   * Converts GLIDE XRANGE result to ioredis format.
+   * GLIDE returns: Record<string, [string, string][]>
+   * ioredis expects: [[id1, [field1, value1, field2, value2]], [id2, [...]]]
+   */
+  static translateStreamRangeResponse(glideResult: any): [string, string[]][] {
+    if (!glideResult || typeof glideResult !== 'object') {
+      return [];
+    }
+
+    const ioredisEntries: [string, string[]][] = [];
+    
+    for (const [entryId, fieldValuePairs] of Object.entries(glideResult)) {
+      const flatFields: string[] = [];
+      for (const [field, value] of fieldValuePairs as [string, string][]) {
+        flatFields.push(field, value);
+      }
+      ioredisEntries.push([entryId, flatFields]);
+    }
+    
+    return ioredisEntries;
+  }
 }

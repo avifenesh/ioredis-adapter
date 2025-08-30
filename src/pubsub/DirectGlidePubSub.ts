@@ -112,6 +112,12 @@ export async function pollForMessage(
 
     return null;
   } catch (error) {
+    // Ignore errors during client shutdown - this is expected
+    if (error && typeof error === 'object' && 'name' in error) {
+      if (error.name === 'ClosingError') {
+        return null; // Client is closing, stop polling
+      }
+    }
     console.error('Error polling for message:', error);
     return null;
   }
@@ -249,9 +255,18 @@ export class LibraryGlideIntegration {
     const poll = async () => {
       if (!this.pollingActive || !this.clients) return;
 
-      const message = await pollForMessage(this.clients.subscriber);
-      if (message) {
-        this.handleLibraryMessage(message);
+      try {
+        const message = await pollForMessage(this.clients.subscriber);
+        if (message && this.pollingActive) {
+          this.handleLibraryMessage(message);
+        }
+      } catch (error) {
+        // Stop polling if client is closing
+        if (error && typeof error === 'object' && 'name' in error && error.name === 'ClosingError') {
+          this.pollingActive = false;
+          return;
+        }
+        // Otherwise continue polling
       }
 
       if (this.pollingActive) {
@@ -302,6 +317,8 @@ export class LibraryGlideIntegration {
 
   async cleanup() {
     this.pollingActive = false;
+    // Small delay to let polling complete
+    await new Promise(resolve => setTimeout(resolve, 10));
     if (this.clients) {
       cleanupPubSubClients(this.clients);
       this.clients = null;
