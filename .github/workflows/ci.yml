@@ -67,6 +67,14 @@ jobs:
           sleep 2
         done
 
+    - name: Setup Valkey Cluster for comprehensive testing
+      run: |
+        echo "🔧 Setting up Valkey cluster for comprehensive testing..."
+        # Make script executable
+        chmod +x ./scripts/start-test-servers.sh
+        # Start cluster (script handles Docker availability check)
+        ./scripts/start-test-servers.sh --force || echo "⚠️ Cluster setup failed, will skip cluster tests"
+
     - name: Run all tests (including JSON/Search and Cluster modules)
       run: npm test
       env:
