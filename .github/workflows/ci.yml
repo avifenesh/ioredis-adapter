@@ -50,11 +50,14 @@ jobs:
     - name: Wait for Valkey Bundle and verify modules
       run: |
         echo "Waiting for Valkey Bundle with modules..."
+        # Install redis-cli to communicate with Valkey Bundle
+        sudo apt-get update && sudo apt-get install -y redis-tools
+        
         for i in {1..30}; do
-          if valkey-cli -h localhost -p 6379 ping > /dev/null 2>&1; then
+          if redis-cli -h localhost -p 6379 ping > /dev/null 2>&1; then
             echo "✅ Valkey Bundle is ready!"
             echo "📦 Checking loaded modules..."
-            valkey-cli -h localhost -p 6379 INFO modules | grep -E "(json|search|bloom)" || echo "⚠️  Module info not available"
+            redis-cli -h localhost -p 6379 INFO modules | grep -E "(json|search|bloom)" || echo "⚠️  Module info not available"
             break
           fi
           echo "⏳ Waiting for Valkey Bundle... ($i/30)"
@@ -125,13 +128,7 @@ jobs:
         CI: true
         SKIP_MODULE_TESTS: true
 
-    - name: Upload coverage to Codecov
-      if: matrix.os == 'ubuntu-latest' && matrix.node == '20'
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage/lcov.info
-        flags: unittests
-        name: codecov-umbrella
+  # Note: Coverage upload is handled in the Linux job
 
   lint:
     name: Lint and Type Check
