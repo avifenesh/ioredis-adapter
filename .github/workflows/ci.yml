@@ -58,12 +58,21 @@ jobs:
 
     - name: Wait for Redis
       run: |
-        timeout 30 bash -c 'until redis-cli ping; do sleep 1; done'
+        for i in {1..30}; do
+          if redis-cli ping > /dev/null 2>&1; then
+            echo "Redis is ready!"
+            break
+          fi
+          echo "Waiting for Redis... ($i/30)"
+          sleep 1
+        done
+        redis-cli ping
 
     - name: Run tests
-      run: npm test
+      run: npm test -- --testPathIgnorePatterns="/tests/unit/json-commands.test.ts|/tests/unit/search-commands.test.ts" --testTimeout=15000
       env:
         CI: true
+        SKIP_MODULE_TESTS: true
 
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.node == '20'

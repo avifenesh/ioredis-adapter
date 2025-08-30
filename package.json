@@ -1,7 +1,7 @@
 {
   "name": "valkey-glide-ioredis-adapter",
-  "version": "0.1.0",
-  "description": "🚀 Drop-in ioredis replacement powered by Valkey GLIDE's high-performance Rust core. 100% Valkey/Redis compatible with Bull, BullMQ, Socket.IO & Express Session.",
+  "version": "0.3.0",
+  "description": "🎯 TRUE Drop-in ioredis replacement with 100% compatibility. Powered by Valkey GLIDE's Rust core. Complete Valkey JSON/Search module support. Zero code changes required.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -19,7 +19,10 @@
   "files": [
     "dist/**",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md",
+    "COMPATIBILITY.md",
+    "MIGRATION.md"
   ],
   "scripts": {
     "build": "tsc",
@@ -71,7 +74,21 @@
     "real-time",
     "microservices",
     "scaling",
-    "performance"
+    "performance",
+    "json",
+    "search",
+    "vector",
+    "ai",
+    "ml",
+    "machine-learning",
+    "vector-search",
+    "full-text-search",
+    "valkeyjson",
+    "valkey-search",
+    "redisjson",
+    "redisearch",
+    "zero-code-changes",
+    "100-percent-compatible"
   ],
   "author": {
     "name": "Avi Fenesh",

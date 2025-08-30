@@ -19,17 +19,19 @@ async function ensureValkeyCluster(): Promise<void> {
   const allUp = checks.every(Boolean);
   if (allUp) return;
   
-  // Use our script instead of Docker Compose
+  // Use our script instead of Docker Compose, but only if it exists and Docker is available
   try {
+    // Check if Docker is available
+    execSync('docker --version', { stdio: 'ignore' });
     console.log('Starting test servers using script...');
-    execSync('./scripts/start-test-servers.sh --force', { stdio: 'inherit' });
+    execSync('./scripts/start-test-servers.sh --force', { stdio: 'inherit', timeout: 30000 });
   } catch (e) {
-    console.warn('Could not start test servers with script, cluster tests may not work');
+    console.warn('Docker not available or script failed, cluster tests may not work. Using fallback configuration.');
     return;
   }
   
   const start = Date.now();
-  while (Date.now() - start < 60000) {
+  while (Date.now() - start < 30000) { // Reduced timeout
     const ready = (await Promise.all(ports.map((p) => isPortOpen(p)))).every(Boolean);
     if (ready) break;
     await new Promise(r => setTimeout(r, 1000));

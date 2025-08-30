@@ -254,8 +254,8 @@ describe('Message Queue Systems Integration', () => {
           },
         });
 
-        // Setup failing processor
-        retryQueue.process(async _job => {
+        // Setup failing processor for the specific job type
+        retryQueue.process('failing-job', async _job => {
           attemptCount++;
           if (attemptCount < 3) {
             throw new Error('Simulated failure');
@@ -301,25 +301,67 @@ describe('Message Queue Systems Integration', () => {
 
     test('should provide job statistics', async () => {
       try {
+        // Create a queue with job retention settings
+        const config = { host: 'localhost', port: 6379 };
+        const statsQueue = new Queue('test-bull-stats', {
+          createClient: (_type: 'client' | 'subscriber' | 'bclient') => {
+            const options: any = { 
+              host: config.host, 
+              port: config.port,
+              keyPrefix: keyPrefix + 'stats:',
+              lazyConnect: false
+            };
+            
+            if (_type === 'bclient' || _type === 'subscriber') {
+              options.maxRetriesPerRequest = null;
+            }
+            
+            return new RedisAdapter(options) as any;
+          },
+          defaultJobOptions: {
+            removeOnComplete: false,  // Keep completed jobs for statistics
+            removeOnFail: false,      // Keep failed jobs for statistics
+          }
+        });
+
         // Setup processor to handle jobs  
-        queue.process('job1', processor);
-        queue.process('job2', processor);
-        queue.process('job3', processor);
+        statsQueue.process('job1', processor);
+        statsQueue.process('job2', processor);
+        statsQueue.process('job3', processor);
+        
+        // Track completed jobs
+        let completedCount = 0;
+        statsQueue.on('completed', (_job) => {
+          completedCount++;
+        });
         
         // Add some jobs
-        await queue.add('job1', { data: 'test1' });
-        await queue.add('job2', { data: 'test2' });
-        await queue.add('job3', { data: 'test3' });
+        await statsQueue.add('job1', { data: 'test1' });
+        await statsQueue.add('job2', { data: 'test2' });
+        await statsQueue.add('job3', { data: 'test3' });
 
-        // Give some time for jobs to be processed
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait for all jobs to complete
+        await new Promise(resolve => {
+          const checkInterval = setInterval(() => {
+            if (completedCount >= 3) {
+              clearInterval(checkInterval);
+              resolve(true);
+            }
+          }, 100);
+          setTimeout(() => {
+            clearInterval(checkInterval);
+            resolve(true);
+          }, 5000);
+        });
 
         // Check queue statistics
-        const waiting = await queue.getWaiting();
-        const active = await queue.getActive();
-        const completed = await queue.getCompleted();
-
+        const waiting = await statsQueue.getWaiting();
+        const active = await statsQueue.getActive();
+        const completed = await statsQueue.getCompleted();
+        
         const totalJobs = waiting.length + active.length + completed.length;
+        
+        await statsQueue.close();
         
         if (totalJobs === 0) {
           throw new Error('Bull statistics test - no jobs found. Redis adapter compatibility issues with Bull job tracking detected');
@@ -682,7 +724,7 @@ describe('Message Queue Systems Integration', () => {
       // Test that the queue works with our custom clients
       const processedJobs: any[] = [];
 
-      queue.process(async (job) => {
+      queue.process('custom-client-job', async (job) => {
         processedJobs.push(job.data);
         return { success: true, processedBy: 'customClient' };
       });
@@ -736,6 +778,8 @@ describe('Message Queue Systems Integration', () => {
         // Test passes if we can at least interact with Bull's APIs (shows basic compatibility)
         expect(typeof waiting.length).toBe('number');
         expect(typeof active.length).toBe('number');
+        expect(typeof completed.length).toBe('number');
+        expect(typeof failed.length).toBe('number');
       }
     }, 15000);
 
@@ -789,7 +833,8 @@ describe('Message Queue Systems Integration', () => {
 
       let jobsCompleted = 0;
 
-      queue.process(async (job) => {
+      // Set up processors for each job type
+      const jobProcessor = async (job: any) => {
         jobsCompleted++;
         
         // Use the custom command via the shared client
@@ -814,7 +859,10 @@ describe('Message Queue Systems Integration', () => {
             error: err instanceof Error ? err.message : String(err)
           };
         }
-      });
+      };
+      
+      queue.process('tracked-job-1', jobProcessor);
+      queue.process('tracked-job-2', jobProcessor);
 
       // Add multiple jobs to test the custom command
       const jobs = await Promise.all([
@@ -830,7 +878,7 @@ describe('Message Queue Systems Integration', () => {
           let completedCount = 0;
           let failedCount = 0;
           
-          queue.on('completed', (job, result) => {
+          queue.on('completed', (_job, _result) => {
             completedCount++;
             if (completedCount + failedCount >= 2) {
               resolve(true);
@@ -874,6 +922,7 @@ describe('Message Queue Systems Integration', () => {
           
           // Test passes if we can at least get queue status (basic functionality works)
           expect(typeof waiting.length).toBe('number');
+          expect(typeof failed.length).toBe('number');
         } catch (err) {
           console.error('Failed to get queue status:', err);
         }
