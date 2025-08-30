@@ -126,7 +126,7 @@ jobs:
         redis-cli ping
 
     - name: Run core tests (skip module tests)
-      run: npm test -- --testPathIgnorePatterns="/tests/unit/json-commands.test.ts|/tests/unit/search-commands.test.ts"
+      run: npm test -- --testPathIgnorePatterns="/tests/unit/json-commands.test.ts|/tests/unit/search-commands.test.ts" --runInBand
       env:
         CI: true
         SKIP_MODULE_TESTS: true
