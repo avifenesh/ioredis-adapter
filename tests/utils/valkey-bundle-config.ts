@@ -221,7 +221,11 @@ export const TEST_DATA = {
       },
       activity: {
         last_login: '2024-01-15T10:30:00Z',
-        page_views: 0,
+        page_views: [
+          '2024-01-10T09:00:00Z',
+          '2024-01-12T14:15:00Z', 
+          '2024-01-14T18:45:00Z'
+        ],
         purchases: []
       }
     }
