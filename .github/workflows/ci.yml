@@ -50,14 +50,15 @@ jobs:
     - name: Wait for Valkey Bundle and verify modules
       run: |
         echo "Waiting for Valkey Bundle with modules..."
-        # Install redis-cli to communicate with Valkey Bundle
-        sudo apt-get update && sudo apt-get install -y redis-tools
+        # Install Valkey CLI from official repository
+        curl -fsSL https://download.valkey.io/valkey-9.0.0-linux-x64.tar.gz | tar xz --strip-components=1 -C /tmp
+        sudo cp /tmp/bin/valkey-cli /usr/local/bin/
         
         for i in {1..30}; do
-          if redis-cli -h localhost -p 6379 ping > /dev/null 2>&1; then
+          if valkey-cli -h localhost -p 6379 ping > /dev/null 2>&1; then
             echo "✅ Valkey Bundle is ready!"
             echo "📦 Checking loaded modules..."
-            redis-cli -h localhost -p 6379 INFO modules | grep -E "(json|search|bloom)" || echo "⚠️  Module info not available"
+            valkey-cli -h localhost -p 6379 INFO modules | grep -E "(json|search)" || echo "⚠️  Module info not available"
             break
           fi
           echo "⏳ Waiting for Valkey Bundle... ($i/30)"

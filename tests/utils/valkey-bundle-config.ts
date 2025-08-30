@@ -58,7 +58,7 @@ export async function checkAvailableModules(redis: any): Promise<{
     return {
       json: info.includes('json') || info.includes('JSON'),
       search: info.includes('search') || info.includes('SEARCH') || info.includes('ft'),
-      bloom: info.includes('bloom') || info.includes('BLOOM') || info.includes('bf'),
+      bloom: false, // Bloom module not supported yet in our adapter
       ldap: info.includes('ldap') || info.includes('LDAP')
     };
   } catch (error) {
@@ -139,7 +139,7 @@ export async function waitForValkeyBundle(
       const modules = await checkAvailableModules(redis);
       
       if (modules.json || modules.search) {
-        console.log('✅ Valkey-bundle is ready with modules:', modules);
+        console.log('✅ Valkey-bundle is ready with supported modules:', { json: modules.json, search: modules.search });
         return true;
       }
       
